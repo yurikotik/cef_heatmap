@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEF Yield & Discount Heat Map - Standalone</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        
+        .heatmap-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1px;
+            background-color: #ddd;
+        }
+        
+        .fund-cell {
+            padding: 15px;
+            background-color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border-left: 5px solid;
+        }
+        
+        .fund-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10;
+            position: relative;
+        }
+        
+        .fund-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .fund-ticker {
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+        }
+        
+        .fund-rank {
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .fund-name {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+        
+        .fund-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .metric {
+            text-align: center;
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .metric-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        
+        .metric-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .fund-score {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .fund-rating {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px;
+            border-radius: 3px;
+        }
+        
+        .fund-category {
+            font-size: 11px;
+            color: #888;
+            text-align: center;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        .rating-excellent { background-color: #28a745; color: white; }
+        .rating-very-good { background-color: #6f42c1; color: white; }
+        .rating-good { background-color: #007bff; color: white; }
+        .rating-fair { background-color: #ffc107; color: black; }
+        .rating-poor { background-color: #fd7e14; color: white; }
+        .rating-avoid { background-color: #dc3545; color: white; }
+        
+        .stats-panel {
+            background: white;
+            margin: 20px auto;
+            max-width: 1400px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .instructions {
+            background: #e8f4fd;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 1400px;
+            border-radius: 8px;
+            border-left: 5px solid #007bff;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h3>🎯 How to Read This Heat Map</h3>
+        <p><strong>Scoring:</strong> 50% Distribution Yield + 50% NAV Discount (deeper discount = better)</p>
+        <p><strong>Colors:</strong> Dark Red (worst) → Yellow (average) → Bright Green (best opportunities)</p>
+        <p><strong>Click any fund</strong> to see detailed information below the heat map.</p>
+    </div>
+
+    <div class="header">
+        <h1>CEF Yield & Discount Heat Map</h1>
+        <p>Ranked by 50/50 weighted combination of Distribution Yield % and NAV Discount %</p>
+        <p><strong>48 Funds</strong> from Pensionizer Top 50 Portfolio</p>
+    </div>
+    
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff0000;"></div>
+            <span>Worst Opportunities</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ffff00;"></div>
+            <span>Average</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #00ff00;"></div>
+            <span>Best Opportunities</span>
+        </div>
+    </div>
+    
+    <div class="stats-panel">
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value">19.95</div>
+                <div class="stat-label">Highest Score (HGLB)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">1.13</div>
+                <div class="stat-label">Lowest Score (AGD)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">8.4%</div>
+                <div class="stat-label">Average Yield</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">-8.2%</div>
+                <div class="stat-label">Average Discount</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="heatmap-container">
+        <div class="heatmap-grid" id="heatmapGrid">
+            <!-- Heat map cells will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <div id="selected-fund" style="background: white; margin: 20px auto; max-width: 1400px; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none;">
+        <h3>Selected Fund Details</h3>
+        <div id="fund-details"></div>
+    </div>
+    
+    <script>
+        // Complete CEF data with scores and colors
+        const cefData = [
+            {rank: 1, ticker: "HGLB", name: "Highland Global Allocation Fund", category: "Global/International", yield_pct: 11.89, discount_pct: -26.00, yield_discount_score: 19.95, rating: "EXCELLENT", color_hex: "#00ff00"},
+            {rank: 2, ticker: "IIF", name: "Morgan Stanley India Investment", category: "Emerging Markets", yield_pct: 10.05, discount_pct: -11.54, yield_discount_score: 10.80, rating: "GOOD", color_hex: "#40ff00"},
+            {rank: 3, ticker: "HQL", name: "abrdn Life Sciences Investors", category: "Healthcare/Biotech", yield_pct: 11.79, discount_pct: -8.95, yield_discount_score: 10.38, rating: "GOOD", color_hex: "#60ff00"},
+            {rank: 4, ticker: "NBXG", name: "Neuberger Brmn Nxt Gnrtn Cnnctvty", category: "Other", yield_pct: 8.01, discount_pct: -11.67, yield_discount_score: 9.84, rating: "GOOD", color_hex: "#80ff00"},
+            {rank: 5, ticker: "ZTR", name: "Virtus Total Return Fund Inc", category: "Other", yield_pct: 9.60, discount_pct: -9.68, yield_discount_score: 9.64, rating: "GOOD", color_hex: "#80ff00"},
+            {rank: 6, ticker: "DIAX", name: "Nuveen Dow 30 Dynamic Overwrite", category: "Other", yield_pct: 8.19, discount_pct: -11.07, yield_discount_score: 9.63, rating: "GOOD", color_hex: "#80ff00"},
+            {rank: 7, ticker: "CHW", name: "Calamos Global Dynamic Income Fund", category: "Global/International", yield_pct: 8.19, discount_pct: -10.83, yield_discount_score: 9.51, rating: "GOOD", color_hex: "#80ff00"},
+            {rank: 8, ticker: "HQH", name: "abrdn Healthcare Investors", category: "Healthcare/Biotech", yield_pct: 12.14, discount_pct: -6.82, yield_discount_score: 9.48, rating: "GOOD", color_hex: "#80ff00"},
+            {rank: 9, ticker: "BWG", name: "BrandywineGLOBAL – Global Inc Opp Fund", category: "Global/International", yield_pct: 10.95, discount_pct: -6.80, yield_discount_score: 8.88, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 10, ticker: "RMT", name: "Royce Micro-Cap Trust", category: "Other", yield_pct: 7.00, discount_pct: -10.69, yield_discount_score: 8.85, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 11, ticker: "NCZ", name: "Virtus Convertible & Income Fund II", category: "Convertible", yield_pct: 10.47, discount_pct: -7.15, yield_discount_score: 8.81, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 12, ticker: "FTF", name: "Franklin Limited Duration Income Trust", category: "Other", yield_pct: 11.47, discount_pct: -5.92, yield_discount_score: 8.70, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 13, ticker: "GDV", name: "Gabelli Dividend & Income", category: "Dividend/Income", yield_pct: 6.24, discount_pct: -11.10, yield_discount_score: 8.67, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 14, ticker: "RA", name: "Brookfield Real Assets Income Fund Inc.", category: "Real Estate", yield_pct: 10.43, discount_pct: -6.67, yield_discount_score: 8.55, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 15, ticker: "BOE", name: "BlackRock Enhanced Glbl Div Trust", category: "Global/International", yield_pct: 8.55, discount_pct: -8.51, yield_discount_score: 8.54, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 16, ticker: "ETW", name: "Eaton Vance Tx-Mgd Glbl Buy-Write Opp", category: "Other", yield_pct: 8.80, discount_pct: -8.12, yield_discount_score: 8.46, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 17, ticker: "NIE", name: "Virtus Equity & Convertible Inc Fund", category: "Convertible", yield_pct: 7.98, discount_pct: -8.91, yield_discount_score: 8.45, rating: "FAIR", color_hex: "#c0ff00"},
+            {rank: 18, ticker: "CPZ", name: "Calamos L/S Equity & Dynamic Inc Trust", category: "Dividend/Income", yield_pct: 10.13, discount_pct: -6.27, yield_discount_score: 8.20, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 19, ticker: "ASG", name: "Liberty All-Star Growth", category: "Equity Growth", yield_pct: 8.53, discount_pct: -7.70, yield_discount_score: 8.12, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 20, ticker: "EMD", name: "Western Asset Emerging Markets Debt", category: "Emerging Markets", yield_pct: 10.94, discount_pct: -5.27, yield_discount_score: 8.11, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 21, ticker: "MHN", name: "BlackRock MuniHoldings NY Qty", category: "Municipal Bond", yield_pct: 6.21, discount_pct: -9.95, yield_discount_score: 8.08, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 22, ticker: "FCT", name: "First Trust Senior FR Inc II", category: "Credit/Floating Rate", yield_pct: 11.69, discount_pct: -4.41, yield_discount_score: 8.05, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 23, ticker: "TYG", name: "Tortoise Energy Infrastructure Corp.", category: "Energy/Infrastructure", yield_pct: 10.35, discount_pct: -5.70, yield_discount_score: 8.03, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 24, ticker: "MFM", name: "MFS Municipal Income", category: "Municipal Bond", yield_pct: 5.48, discount_pct: -10.39, yield_discount_score: 7.94, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 25, ticker: "MHD", name: "BlackRock Muniholdings", category: "Municipal Bond", yield_pct: 6.22, discount_pct: -9.47, yield_discount_score: 7.85, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 26, ticker: "MYN", name: "BlackRock MuniYield NY Quality", category: "Municipal Bond", yield_pct: 6.34, discount_pct: -9.27, yield_discount_score: 7.81, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 27, ticker: "EVT", name: "Eaton Vance Tax Advantaged Dividend Inc", category: "Dividend/Income", yield_pct: 8.13, discount_pct: -7.46, yield_discount_score: 7.80, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 28, ticker: "TDF", name: "Templeton Dragon", category: "Emerging Markets", yield_pct: 1.76, discount_pct: -13.76, yield_discount_score: 7.76, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 29, ticker: "BLE", name: "BlackRock Municipal Income II", category: "Municipal Bond", yield_pct: 6.33, discount_pct: -9.15, yield_discount_score: 7.74, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 30, ticker: "RMM", name: "RiverNorth Managed Duration Muni Inc Fd", category: "Municipal Bond", yield_pct: 7.89, discount_pct: -7.52, yield_discount_score: 7.71, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 31, ticker: "ETO", name: "Eaton Vance Tax-Advantaged Glbl Div Opp", category: "Dividend/Income", yield_pct: 7.56, discount_pct: -7.37, yield_discount_score: 7.47, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 32, ticker: "AFB", name: "AllianceBernstein National Mun Inc", category: "Municipal Bond", yield_pct: 5.27, discount_pct: -9.55, yield_discount_score: 7.42, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 33, ticker: "RIV", name: "RiverNorth Opportunities Fund", category: "Other", yield_pct: 12.27, discount_pct: -2.42, yield_discount_score: 7.35, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 34, ticker: "IGD", name: "Voya Global Equity Dividend&Prm Opp Fd", category: "Dividend/Income", yield_pct: 10.15, discount_pct: -4.37, yield_discount_score: 7.27, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 35, ticker: "DHF", name: "BNY Mellon High Yield Strategies Fund", category: "Dividend/Income", yield_pct: 8.02, discount_pct: -6.43, yield_discount_score: 7.23, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 36, ticker: "MYD", name: "BlackRock Muniyield", category: "Municipal Bond", yield_pct: 6.28, discount_pct: -7.79, yield_discount_score: 7.04, rating: "FAIR", color_hex: "#ffff00"},
+            {rank: 37, ticker: "BFK", name: "BlackRock Municipal Income", category: "Municipal Bond", yield_pct: 6.04, discount_pct: -7.88, yield_discount_score: 6.96, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 38, ticker: "EMF", name: "Templeton Emerging Markets", category: "Emerging Markets", yield_pct: 1.41, discount_pct: -12.37, yield_discount_score: 6.89, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 39, ticker: "BGX", name: "Blackstone Long-Short Credit Income", category: "Credit/Floating Rate", yield_pct: 8.10, discount_pct: -5.40, yield_discount_score: 6.75, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 40, ticker: "TY", name: "Tri-Continental", category: "Other", yield_pct: 3.15, discount_pct: -10.04, yield_discount_score: 6.60, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 41, ticker: "WIA", name: "U.S. Treasury Inflation Prot Secs Fd", category: "Treasury/Government", yield_pct: 4.76, discount_pct: -8.33, yield_discount_score: 6.55, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 42, ticker: "TEI", name: "Templeton Emerg Mkts Income", category: "Emerging Markets", yield_pct: 9.06, discount_pct: -3.97, yield_discount_score: 6.52, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 43, ticker: "JGH", name: "Nuveen Global High Income Fund", category: "Global/International", yield_pct: 9.20, discount_pct: -3.64, yield_discount_score: 6.42, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 44, ticker: "LGI", name: "Lazard Global Total Return and Income", category: "Global/International", yield_pct: 9.91, discount_pct: -2.69, yield_discount_score: 6.30, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 45, ticker: "EDD", name: "Morgan Stanley Emrgng Mkts Domestic Debt", category: "Emerging Markets", yield_pct: 8.79, discount_pct: -3.36, yield_discount_score: 6.08, rating: "POOR", color_hex: "#ff8000"},
+            {rank: 46, ticker: "GAM", name: "General American Investors", category: "Other", yield_pct: 0.41, discount_pct: -10.95, yield_discount_score: 5.68, rating: "POOR", color_hex: "#ff4000"},
+            {rank: 47, ticker: "AGD", name: "abrdn Global Dynamic Dividend", category: "Dividend/Income", yield_pct: 10.73, discount_pct: 8.47, yield_discount_score: 1.13, rating: "AVOID", color_hex: "#ff0000"}
+        ];
+        
+        function getRatingClass(rating) {
+            return 'rating-' + rating.toLowerCase().replace(' ', '-');
+        }
+        
+        function createHeatMap() {
+            const grid = document.getElementById('heatmapGrid');
+            
+            cefData.forEach(fund => {
+                const cell = document.createElement('div');
+                cell.className = 'fund-cell';
+                cell.style.borderLeftColor = fund.color_hex;
+                
+                cell.innerHTML = `
+                    <div class="fund-header">
+                        <div class="fund-ticker">${fund.ticker}</div>
+                        <div class="fund-rank">#${fund.rank}</div>
+                    </div>
+                    <div class="fund-name">${fund.name}</div>
+                    <div class="fund-metrics">
+                        <div class="metric">
+                            <div class="metric-label">Yield</div>
+                            <div class="metric-value">${fund.yield_pct}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Discount</div>
+                            <div class="metric-value">${fund.discount_pct}%</div>
+                        </div>
+                    </div>
+                    <div class="fund-score" style="background-color: ${fund.color_hex};">
+                        Score: ${fund.yield_discount_score}
+                    </div>
+                    <div class="fund-rating ${getRatingClass(fund.rating)}">
+                        ${fund.rating}
+                    </div>
+                    <div class="fund-category">${fund.category}</div>
+                `;
+                
+                // Add click handler
+                cell.addEventListener('click', function() {
+                    showFundDetails(fund);
+                });
+                
+                grid.appendChild(cell);
+            });
+        }
+        
+        function showFundDetails(fund) {
+            const detailsDiv = document.getElementById('selected-fund');
+            const fundDetails = document.getElementById('fund-details');
+            
+            fundDetails.innerHTML = `
+                <h4>${fund.ticker} - ${fund.name}</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 15px 0;">
+                    <div><strong>Rank:</strong> #${fund.rank} of 47</div>
+                    <div><strong>Category:</strong> ${fund.category}</div>
+                    <div><strong>Distribution Yield:</strong> ${fund.yield_pct}%</div>
+                    <div><strong>NAV Discount:</strong> ${fund.discount_pct}%</div>
+                    <div><strong>Combined Score:</strong> ${fund.yield_discount_score}</div>
+                    <div><strong>Rating:</strong> <span class="fund-rating ${getRatingClass(fund.rating)}" style="padding: 2px 8px; border-radius: 3px;">${fund.rating}</span></div>
+                </div>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 15px;">
+                    <strong>Investment Insight:</strong> 
+                    ${getInvestmentInsight(fund)}
+                </div>
+            `;
+            
+            detailsDiv.style.display = 'block';
+            detailsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function getInvestmentInsight(fund) {
+            if (fund.rating === 'EXCELLENT') {
+                return `Exceptional opportunity with ${fund.yield_pct}% yield and ${Math.abs(fund.discount_pct)}% discount. Investigate fundamentals before investing.`;
+            } else if (fund.rating === 'GOOD') {
+                return `Strong opportunity combining decent yield with attractive discount. Good risk-adjusted potential.`;
+            } else if (fund.rating === 'FAIR') {
+                return `Moderate opportunity. Consider as part of diversified CEF portfolio.`;
+            } else if (fund.rating === 'POOR') {
+                return `Below-average opportunity. Yield may not justify the investment given discount level.`;
+            } else {
+                return `Avoid. Trading at premium eliminates the discount advantage that makes CEFs attractive.`;
+            }
+        }
+        
+        // Initialize heat map when page loads
+        document.addEventListener('DOMContentLoaded', createHeatMap);
+    </script>
+</body>
+</html>
