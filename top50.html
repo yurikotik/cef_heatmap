@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CEF Heat Map - Club Member Space</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+        .fund { padding: 15px; background: white; border-radius: 8px; border-left: 5px solid; }
+        .fund:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .ticker { font-weight: bold; font-size: 18px; }
+        .rank { float: right; background: #f0f0f0; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .name { color: #666; margin: 5px 0; }
+        .metrics { display: flex; gap: 10px; margin: 10px 0; }
+        .metric { flex: 1; text-align: center; background: #f8f9fa; padding: 8px; border-radius: 4px; }
+        .score { text-align: center; padding: 8px; color: white; font-weight: bold; border-radius: 4px; }
+        .rating { text-align: center; padding: 4px; font-size: 12px; font-weight: bold; border-radius: 3px; }
+        .excellent { background: #28a745; color: white; }
+        .good { background: #007bff; color: white; }
+        .fair { background: #ffc107; color: black; }
+        .poor { background: #fd7e14; color: white; }
+        .avoid { background: #dc3545; color: white; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>CEF Yield & Discount Heat Map</h1>
+        <p>50/50 weighted: Distribution Yield % + NAV Discount %</p>
+        <p><strong>47 Funds</strong> ranked from best (green) to worst (red)</p>
+    </div>
+    
+    <div class="grid" id="funds"></div>
+    
+    <script>
+        const funds = [
+            {rank:1, ticker:"HGLB", name:"Highland Global Allocation Fund", yield:11.89, discount:-26.00, score:19.95, rating:"excellent", color:"#00ff00"},
+            {rank:2, ticker:"IIF", name:"Morgan Stanley India Investment", yield:10.05, discount:-11.54, score:10.80, rating:"good", color:"#40ff00"},
+            {rank:3, ticker:"HQL", name:"abrdn Life Sciences Investors", yield:11.79, discount:-8.95, score:10.38, rating:"good", color:"#60ff00"},
+            {rank:4, ticker:"NBXG", name:"Neuberger Next Gen Connectivity", yield:8.01, discount:-11.67, score:9.84, rating:"good", color:"#80ff00"},
+            {rank:5, ticker:"ZTR", name:"Virtus Total Return Fund", yield:9.60, discount:-9.68, score:9.64, rating:"good", color:"#80ff00"},
+            {rank:6, ticker:"DIAX", name:"Nuveen Dow 30 Dynamic Overwrite", yield:8.19, discount:-11.07, score:9.63, rating:"good", color:"#80ff00"},
+            {rank:7, ticker:"CHW", name:"Calamos Global Dynamic Income", yield:8.19, discount:-10.83, score:9.51, rating:"good", color:"#80ff00"},
+            {rank:8, ticker:"HQH", name:"abrdn Healthcare Investors", yield:12.14, discount:-6.82, score:9.48, rating:"good", color:"#80ff00"},
+            {rank:9, ticker:"BWG", name:"BrandywineGLOBAL Global Income", yield:10.95, discount:-6.80, score:8.88, rating:"fair", color:"#c0ff00"},
+            {rank:10, ticker:"RMT", name:"Royce Micro-Cap Trust", yield:7.00, discount:-10.69, score:8.85, rating:"fair", color:"#c0ff00"},
+            {rank:11, ticker:"NCZ", name:"Virtus Convertible & Income II", yield:10.47, discount:-7.15, score:8.81, rating:"fair", color:"#c0ff00"},
+            {rank:12, ticker:"FTF", name:"Franklin Limited Duration Income", yield:11.47, discount:-5.92, score:8.70, rating:"fair", color:"#c0ff00"},
+            {rank:13, ticker:"GDV", name:"Gabelli Dividend & Income", yield:6.24, discount:-11.10, score:8.67, rating:"fair", color:"#c0ff00"},
+            {rank:14, ticker:"RA", name:"Brookfield Real Assets Income", yield:10.43, discount:-6.67, score:8.55, rating:"fair", color:"#c0ff00"},
+            {rank:15, ticker:"BOE", name:"BlackRock Enhanced Global Dividend", yield:8.55, discount:-8.51, score:8.54, rating:"fair", color:"#c0ff00"},
+            {rank:16, ticker:"ETW", name:"Eaton Vance Global Buy-Write", yield:8.80, discount:-8.12, score:8.46, rating:"fair", color:"#c0ff00"},
+            {rank:17, ticker:"NIE", name:"Virtus Equity & Convertible Income", yield:7.98, discount:-8.91, score:8.45, rating:"fair", color:"#c0ff00"},
+            {rank:18, ticker:"CPZ", name:"Calamos Long/Short Equity", yield:10.13, discount:-6.27, score:8.20, rating:"fair", color:"#ffff00"},
+            {rank:19, ticker:"ASG", name:"Liberty All-Star Growth", yield:8.53, discount:-7.70, score:8.12, rating:"fair", color:"#ffff00"},
+            {rank:20, ticker:"EMD", name:"Western Asset Emerging Markets", yield:10.94, discount:-5.27, score:8.11, rating:"fair", color:"#ffff00"},
+            {rank:21, ticker:"MHN", name:"BlackRock MuniHoldings NY", yield:6.21, discount:-9.95, score:8.08, rating:"fair", color:"#ffff00"},
+            {rank:22, ticker:"FCT", name:"First Trust Senior Floating Rate", yield:11.69, discount:-4.41, score:8.05, rating:"fair", color:"#ffff00"},
+            {rank:23, ticker:"TYG", name:"Tortoise Energy Infrastructure", yield:10.35, discount:-5.70, score:8.03, rating:"fair", color:"#ffff00"},
+            {rank:24, ticker:"MFM", name:"MFS Municipal Income", yield:5.48, discount:-10.39, score:7.94, rating:"fair", color:"#ffff00"},
+            {rank:25, ticker:"MHD", name:"BlackRock Muniholdings", yield:6.22, discount:-9.47, score:7.85, rating:"fair", color:"#ffff00"},
+            {rank:26, ticker:"MYN", name:"BlackRock MuniYield NY Quality", yield:6.34, discount:-9.27, score:7.81, rating:"fair", color:"#ffff00"},
+            {rank:27, ticker:"EVT", name:"Eaton Vance Tax Advantaged Dividend", yield:8.13, discount:-7.46, score:7.80, rating:"fair", color:"#ffff00"},
+            {rank:28, ticker:"TDF", name:"Templeton Dragon Fund", yield:1.76, discount:-13.76, score:7.76, rating:"fair", color:"#ffff00"},
+            {rank:29, ticker:"BLE", name:"BlackRock Municipal Income II", yield:6.33, discount:-9.15, score:7.74, rating:"fair", color:"#ffff00"},
+            {rank:30, ticker:"RMM", name:"RiverNorth Managed Duration Muni", yield:7.89, discount:-7.52, score:7.71, rating:"fair", color:"#ffff00"},
+            {rank:31, ticker:"ETO", name:"Eaton Vance Tax-Advantaged Global", yield:7.56, discount:-7.37, score:7.47, rating:"fair", color:"#ffff00"},
+            {rank:32, ticker:"AFB", name:"AllianceBernstein National Muni", yield:5.27, discount:-9.55, score:7.42, rating:"fair", color:"#ffff00"},
+            {rank:33, ticker:"RIV", name:"RiverNorth Opportunities Fund", yield:12.27, discount:-2.42, score:7.35, rating:"fair", color:"#ffff00"},
+            {rank:34, ticker:"IGD", name:"Voya Global Equity Dividend", yield:10.15, discount:-4.37, score:7.27, rating:"fair", color:"#ffff00"},
+            {rank:35, ticker:"DHF", name:"BNY Mellon High Yield Strategies", yield:8.02, discount:-6.43, score:7.23, rating:"fair", color:"#ffff00"},
+            {rank:36, ticker:"MYD", name:"BlackRock Muniyield", yield:6.28, discount:-7.79, score:7.04, rating:"fair", color:"#ffff00"},
+            {rank:37, ticker:"BFK", name:"BlackRock Municipal Income", yield:6.04, discount:-7.88, score:6.96, rating:"poor", color:"#ff8000"},
+            {rank:38, ticker:"EMF", name:"Templeton Emerging Markets", yield:1.41, discount:-12.37, score:6.89, rating:"poor", color:"#ff8000"},
+            {rank:39, ticker:"BGX", name:"Blackstone Long-Short Credit", yield:8.10, discount:-5.40, score:6.75, rating:"poor", color:"#ff8000"},
+            {rank:40, ticker:"TY", name:"Tri-Continental Corp", yield:3.15, discount:-10.04, score:6.60, rating:"poor", color:"#ff8000"},
+            {rank:41, ticker:"WIA", name:"US Treasury Inflation Protected", yield:4.76, discount:-8.33, score:6.55, rating:"poor", color:"#ff8000"},
+            {rank:42, ticker:"TEI", name:"Templeton Emerging Markets Income", yield:9.06, discount:-3.97, score:6.52, rating:"poor", color:"#ff8000"},
+            {rank:43, ticker:"JGH", name:"Nuveen Global High Income", yield:9.20, discount:-3.64, score:6.42, rating:"poor", color:"#ff8000"},
+            {rank:44, ticker:"LGI", name:"Lazard Global Total Return", yield:9.91, discount:-2.69, score:6.30, rating:"poor", color:"#ff8000"},
+            {rank:45, ticker:"EDD", name:"Morgan Stanley Emerging Markets", yield:8.79, discount:-3.36, score:6.08, rating:"poor", color:"#ff8000"},
+            {rank:46, ticker:"GAM", name:"General American Investors", yield:0.41, discount:-10.95, score:5.68, rating:"poor", color:"#ff4000"},
+            {rank:47, ticker:"AGD", name:"abrdn Global Dynamic Dividend", yield:10.73, discount:8.47, score:1.13, rating:"avoid", color:"#ff0000"}
+        ];
+        
+        const grid = document.getElementById('funds');
+        funds.forEach(fund => {
+            const div = document.createElement('div');
+            div.className = 'fund';
+            div.style.borderLeftColor = fund.color;
+            div.innerHTML = `
+                <div class="ticker">${fund.ticker}<span class="rank">#${fund.rank}</span></div>
+                <div class="name">${fund.name}</div>
+                <div class="metrics">
+                    <div class="metric"><strong>${fund.yield}%</strong><br><small>Yield</small></div>
+                    <div class="metric"><strong>${fund.discount}%</strong><br><small>Discount</small></div>
+                </div>
+                <div class="score" style="background-color: ${fund.color};">Score: ${fund.score}</div>
+                <div class="rating ${fund.rating}">${fund.rating.toUpperCase()}</div>
+            `;
+            grid.appendChild(div);
+        });
+    </script>
+</body>
+</html>
